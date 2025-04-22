@@ -5,11 +5,12 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"github.com/Cladkoewka/movie-manager/internal/model"
+	"github.com/Cladkoewka/movie-manager/internal/model/dto"
 	"github.com/Cladkoewka/movie-manager/internal/config"
 )
 
 type MovieRepository interface {
-	GetAllMovies() ([]model.Movie, error)
+	GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error)
 	GetMovieByID(id int64) (*model.Movie, error)
 	CreateMovie(movie model.Movie) (*model.Movie, error)
 	UpdateMovie(movie model.Movie) (*model.Movie,error)
@@ -41,11 +42,35 @@ func NewDBConnection() (*gorm.DB, error) {
 	return db, nil
 }
 
-func (r *MovieRepositoryImpl) GetAllMovies() ([]model.Movie, error) {
+func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error) {
 	var movies []model.Movie
-	if err := r.db.Find(&movies).Error; err != nil {
+	query := r.db.Model(&model.Movie{})
+
+	if params.Search != "" {
+		query = query.Where("title LIKE ?", "%"+params.Search+"%")
+	}
+
+	if params.Genre != "" {
+		query = query.Where("genre = ?", params.Genre)
+	}
+
+	if params.Language != "" {
+		query = query.Where("language = ?", params.Language)
+	}
+
+	if params.Rating != nil {
+		query = query.Where("rating >= ?", *params.Rating)
+	}
+
+	query = query.Order(params.SortBy + " " + params.OrderBy)
+
+	offset := (params.Page - 1) * params.PageSize
+	query = query.Limit(params.PageSize).Offset(offset)
+
+	if err := query.Find(&movies).Error; err != nil {
 		return nil, err
 	}
+
 	return movies, nil
 }
 

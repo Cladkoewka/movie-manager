@@ -2,6 +2,8 @@ package service
 
 import (
 	"github.com/Cladkoewka/movie-manager/internal/model"
+	"github.com/Cladkoewka/movie-manager/internal/constants"
+	"github.com/Cladkoewka/movie-manager/internal/model/dto"
 	"github.com/Cladkoewka/movie-manager/internal/repository"
 )
 
@@ -13,8 +15,29 @@ func NewMovieService(repo repository.MovieRepository) *MovieService {
 	return &MovieService{repo: repo}
 }
 
-func (s *MovieService) GetAllMovies() ([]model.Movie, error) {
-	movies, err := s.repo.GetAllMovies()
+func (s *MovieService) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error) {
+	if !constants.AllowedSortFields[params.SortBy] {
+		params.SortBy = constants.DefaultSortBy
+	}
+
+	if params.OrderBy != "asc" && params.OrderBy != "desc" {
+		params.OrderBy = constants.DefaultOrderBy
+	}
+
+	if params.Page <= 0 {
+		params.Page = constants.DefaultPage
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = constants.DefaultPageSize
+	}
+
+	if params.Rating != nil {
+		if *params.Rating < 0 || *params.Rating > 10 {
+			params.Rating = nil
+		}
+	}
+
+	movies, err := s.repo.GetAllMovies(params)
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,10 @@
+// @title Movie Manager API
+// @version 1.0
+// @description This is a simple Movie Manager API
+// @host localhost:8080
+// @BasePath /
+
+// @schemes http
 package main
 
 import (
@@ -8,6 +15,9 @@ import (
 	"gorm.io/gorm"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"log"
+	_ "github.com/Cladkoewka/movie-manager/docs"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
 )
 
 func runMigrations(db *gorm.DB) {
@@ -27,6 +37,7 @@ func main() {
 	handler := handler.NewMovieHandler(service)
 
 	r := gin.Default()
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/movies", handler.GetAllMovies)
 	r.GET("/movies/:id", handler.GetMovieByID)
