@@ -15,6 +15,7 @@ type MovieRepository interface {
 	CreateMovie(movie model.Movie) (*model.Movie, error)
 	UpdateMovie(movie model.Movie) (*model.Movie,error)
 	DeleteMovie(id int64) error
+	UpdateMoviePoster(movieID int64, poster []byte) error
 }
 
 type MovieRepositoryImpl struct {
@@ -101,4 +102,13 @@ func (r *MovieRepositoryImpl) DeleteMovie(id int64) error {
 		return err
 	}
 	return nil
+}
+
+func (r *MovieRepositoryImpl) UpdateMoviePoster(movieID int64, poster []byte) error {
+	var movie model.Movie
+	if err := r.db.First(&movie, "id = ?", movieID).Error; err != nil {
+		return err
+	}
+
+	return r.db.Save(&movie).Error
 }

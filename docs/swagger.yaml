@@ -14,8 +14,8 @@ definitions:
         type: integer
       language:
         type: string
-      poster_url:
-        type: string
+      poster_id:
+        type: integer
       rating:
         type: number
       release_date:
@@ -24,6 +24,21 @@ definitions:
         type: string
       trailer_url:
         type: string
+    type: object
+  model.MoviePoster:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      mime_type:
+        type: string
+      movie_id:
+        type: integer
+      poster:
+        items:
+          type: integer
+        type: array
     type: object
 host: localhost:8080
 info:
@@ -214,6 +229,71 @@ paths:
             additionalProperties: true
             type: object
       summary: Update an existing movie
+      tags:
+      - movies
+  /movies/{id}/poster:
+    get:
+      description: Get the poster of a movie by its ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MoviePoster'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a movie poster by movie ID
+      tags:
+      - movies
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload a poster for a movie by its ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Movie Poster
+        in: formData
+        name: poster
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Upload a movie poster
       tags:
       - movies
 schemes:

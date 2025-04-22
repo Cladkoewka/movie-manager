@@ -3,7 +3,6 @@ package handler
 import (
 	"net/http"
 	"strconv"
-
 	"github.com/Cladkoewka/movie-manager/internal/constants"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/model/dto"
@@ -12,11 +11,12 @@ import (
 )
 
 type MovieHandler struct {
-	service *service.MovieService
+	movieService *service.MovieService
+	moviePosterService *service.MoviePosterService
 }
 
-func NewMovieHandler(service *service.MovieService) *MovieHandler {
-	return &MovieHandler{service: service}
+func NewMovieHandler(movieService *service.MovieService, moviePosterService *service.MoviePosterService) *MovieHandler {
+	return &MovieHandler{movieService: movieService, moviePosterService: moviePosterService}	
 }
 
 // GetAllMovies godoc
@@ -64,7 +64,7 @@ func (h *MovieHandler) GetAllMovies(c *gin.Context) {
 		params.PageSize = constants.DefaultPageSize
 	}
 
-	movies, err := h.service.GetAllMovies(params)
+	movies, err := h.movieService.GetAllMovies(params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch movies"})
 		return 
@@ -89,7 +89,7 @@ func (h *MovieHandler) GetMovieByID(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
 		return
 	}
-	movie, err := h.service.GetMovieByID(id)
+	movie, err := h.movieService.GetMovieByID(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Movie not found"})
 		return
@@ -114,7 +114,7 @@ func (h *MovieHandler) CreateMovie(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	newMovie, err := h.service.CreateMovie(movie)
+	newMovie, err := h.movieService.CreateMovie(movie)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create movie"})
 		return
@@ -146,7 +146,7 @@ func (h *MovieHandler) UpdateMovie(c *gin.Context) {
 		return
 	}
 	movie.ID = id
-	updatedMovie, err := h.service.UpdateMovie(movie)
+	updatedMovie, err := h.movieService.UpdateMovie(movie)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update movie"})
 		return
@@ -171,10 +171,82 @@ func (h *MovieHandler) DeleteMovie(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
 		return
 	}
-	err = h.service.DeleteMovie(id)
+	err = h.movieService.DeleteMovie(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete movie"})
 		return
 	}
 	c.JSON(http.StatusNoContent, nil)
+}
+
+// UploadPoster godoc
+// @Summary Upload a movie poster
+// @Description Upload a poster for a movie by its ID
+// @Tags movies
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path int64 true "Movie ID"
+// @Param poster formData file true "Movie Poster"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /movies/{id}/poster [post]
+func (h *MovieHandler) UploadPoster(c *gin.Context) {
+	movieID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
+		return
+	}
+
+	file, err := c.FormFile("poster")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to upload file"})
+		return
+	}
+
+	fileData, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read file"})
+		return
+	}
+	defer fileData.Close()
+
+	// Сохраняем постер, передавая в сервис сам файл
+	mimeType := file.Header.Get("Content-Type")
+	err = h.moviePosterService.SavePoster(movieID, fileData, mimeType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save poster", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Poster uploaded successfully"})
+}
+
+
+// GetPoster godoc
+// @Summary Get a movie poster by movie ID
+// @Description Get the poster of a movie by its ID
+// @Tags movies
+// @Produce json
+// @Param id path int64 true "Movie ID"
+// @Success 200 {object} model.MoviePoster
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /movies/{id}/poster [get]
+func (h *MovieHandler) GetPoster(c *gin.Context) {
+	movieID, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid movie ID"})
+		return
+	}
+
+	poster, err := h.moviePosterService.GetPosterByMovieID(movieID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Poster not found"})
+		return
+	}
+
+	// Set the appropriate Content-Type based on the MIME type stored
+	c.Header("Content-Type", poster.MimeType)
+	c.Data(http.StatusOK, poster.MimeType, poster.Poster)
 }

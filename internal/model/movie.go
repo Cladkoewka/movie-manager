@@ -12,6 +12,5 @@ type Movie struct {
 	Rating float64 `json:"rating"`
 	Duration int `json:"duration"`
 	Language string `json:"language"`
-	PosterURL string `json:"poster_url"`
 	TrailerURL string `json:"trailer_url"`
 }

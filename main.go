@@ -3,7 +3,6 @@
 // @description This is a simple Movie Manager API
 // @host localhost:8080
 // @BasePath /
-
 // @schemes http
 package main
 
@@ -24,6 +23,9 @@ func runMigrations(db *gorm.DB) {
 	if err := db.AutoMigrate(&model.Movie{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	if err := db.AutoMigrate(&model.MoviePoster{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
 }
 
 func main() {
@@ -31,10 +33,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
+	runMigrations(db)
 
-	repository := repository.NewMovieRepository(db)
-	service := service.NewMovieService(repository)
-	handler := handler.NewMovieHandler(service)
+	movieRepository := repository.NewMovieRepository(db)
+	movieService := service.NewMovieService(movieRepository)
+	moviePosterRepository := repository.NewMoviePosterRepository(db)
+	moviePosterService := service.NewMoviePosterService(moviePosterRepository)
+	handler := handler.NewMovieHandler(movieService, moviePosterService)
 
 	r := gin.Default()
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -44,6 +49,8 @@ func main() {
 	r.POST("/movies", handler.CreateMovie)
 	r.PUT("/movies/:id", handler.UpdateMovie)
 	r.DELETE("/movies/:id", handler.DeleteMovie)
+	r.POST("/movies/:id/poster", handler.UploadPoster)
+	r.GET("/movies/:id/poster", handler.GetPoster)
 
 	if err := r.Run("localhost:8080"); err != nil {
 		log.Fatal("Failed to start server", err)
