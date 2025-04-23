@@ -18,6 +18,7 @@ import (
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/repository"
 	"github.com/Cladkoewka/movie-manager/internal/service"
+	"github.com/Cladkoewka/movie-manager/internal/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/kurin/blazer/b2"
 	swaggerFiles "github.com/swaggo/files"
@@ -45,9 +46,11 @@ func main() {
 	}
 
 	bucket, bucketURL := initB2()
+	
+	cacheService := cache.NewRedisService()
 
 	
-	movieRepository := repository.NewMovieRepository(db)
+	movieRepository := repository.NewMovieRepository(db, cacheService)
 	movieService := service.NewMovieService(movieRepository)
 	moviePosterRepository := repository.NewMoviePosterRepository(db)
 	moviePosterService := service.NewMoviePosterService(moviePosterRepository)

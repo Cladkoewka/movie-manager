@@ -1,13 +1,17 @@
 package repository
 
 import (
+	"context"
 	"fmt"
+	"time"
 
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+
+	"github.com/Cladkoewka/movie-manager/internal/cache"
 	"github.com/Cladkoewka/movie-manager/internal/config"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/model/dto"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 type MovieRepository interface {
@@ -21,10 +25,11 @@ type MovieRepository interface {
 
 type MovieRepositoryImpl struct {
 	db *gorm.DB 
+	redisService *cache.RedisService 
 }
 
-func NewMovieRepository(db *gorm.DB) MovieRepository {
-	return &MovieRepositoryImpl{db: db}
+func NewMovieRepository(db *gorm.DB, redisService *cache.RedisService) MovieRepository {
+	return &MovieRepositoryImpl{db: db, redisService: redisService}
 }
 
 func NewDBConnection() (*gorm.DB, error) {
@@ -46,6 +51,14 @@ func NewDBConnection() (*gorm.DB, error) {
 
 func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error) {
 	var movies []model.Movie
+
+	key, err := r.redisService.GenerateCacheKey("movies", params)
+	if err == nil {
+		if err := r.redisService.GetCache(context.Background(), key, &movies); err == nil {
+			return movies, nil
+		}
+	}
+
 	query := r.db.Model(&model.Movie{})
 
 	if params.Search != "" {
@@ -72,6 +85,11 @@ func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) ([]model
 	if err := query.Find(&movies).Error; err != nil {
 		return nil, err
 	}
+
+	if cacheKey, err := r.redisService.GenerateCacheKey("movies", params); err == nil {
+    _ = r.redisService.SetCache(context.Background(), cacheKey, movies, 10*time.Minute)
+	}	
+
 
 	return movies, nil
 }
