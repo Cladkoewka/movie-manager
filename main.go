@@ -7,17 +7,81 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"log"
+	"os"
+
+	_ "github.com/Cladkoewka/movie-manager/docs"
+	"github.com/Cladkoewka/movie-manager/internal/handler"
+	"github.com/Cladkoewka/movie-manager/internal/loader"
+	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/repository"
 	"github.com/Cladkoewka/movie-manager/internal/service"
-	"github.com/Cladkoewka/movie-manager/internal/handler"
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
-	"github.com/Cladkoewka/movie-manager/internal/model"
-	"log"
-	_ "github.com/Cladkoewka/movie-manager/docs"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/kurin/blazer/b2"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
+
+var (
+	shouldMigrate bool
+	shouldLoadInitialData bool
+)
+
+func init() {
+	flag.BoolVar(&shouldMigrate, "migrate", false, "Run database migrations")
+	flag.BoolVar(&shouldLoadInitialData, "load", false, "Load initial data from JSON")
+	flag.Parse()
+}
+
+
+func main() {
+	db := initDB()
+
+	if shouldMigrate {
+		runMigrations(db)
+	}
+
+	bucket, bucketURL := initB2()
+
+	
+	movieRepository := repository.NewMovieRepository(db)
+	movieService := service.NewMovieService(movieRepository)
+	moviePosterRepository := repository.NewMoviePosterRepository(db)
+	moviePosterService := service.NewMoviePosterService(moviePosterRepository)
+	movieHandler := handler.NewMovieHandler(movieService, moviePosterService)
+	movieTrailerService := service.NewMovieTrailerService(movieRepository, bucket, bucketURL)
+	movieTrailerHandler := handler.NewMovieTrailerHandler(movieTrailerService)
+
+	if shouldLoadInitialData {
+		loadInitialData(movieService)
+	}
+
+	r := gin.Default()
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	r.GET("/movies", movieHandler.GetAllMovies)
+	r.GET("/movies/:id", movieHandler.GetMovieByID)
+	r.POST("/movies", movieHandler.CreateMovie)
+	r.PUT("/movies/:id", movieHandler.UpdateMovie)
+	r.DELETE("/movies/:id", movieHandler.DeleteMovie)
+	r.POST("/movies/:id/poster", movieHandler.UploadPoster)
+	r.GET("/movies/:id/poster", movieHandler.GetPoster)
+	r.POST("/movies/:id/trailer", movieTrailerHandler.UploadTrailer)
+	r.PUT("/movies/:id/trailer", movieTrailerHandler.SetTrailerUrl)
+
+	startServer(r)
+}
+
+func initDB() *gorm.DB {
+	db, err := repository.NewDBConnection()
+	if err != nil {
+		log.Fatalf("Error connecting to database: %v", err)
+	}
+	return db
+}
 
 func runMigrations(db *gorm.DB) {
 	if err := db.AutoMigrate(&model.Movie{}); err != nil {
@@ -28,31 +92,34 @@ func runMigrations(db *gorm.DB) {
 	}
 }
 
-func main() {
-	db, err := repository.NewDBConnection()
+func initB2() (*b2.Bucket, string) {
+	keyID := os.Getenv("B2_KEY_ID")
+	appKey := os.Getenv("B2_APP_KEY")
+	bucketName := os.Getenv("B2_BUCKET")
+	bucketURL := os.Getenv("B2_BUCKET_URL")
+
+	client, err := b2.NewClient(context.Background(), keyID, appKey)
 	if err != nil {
-		log.Fatalf("Error connecting to database: %v", err)
+		log.Fatalf("Failed to create B2 client: %v", err)
 	}
-	runMigrations(db)
 
-	movieRepository := repository.NewMovieRepository(db)
-	movieService := service.NewMovieService(movieRepository)
-	moviePosterRepository := repository.NewMoviePosterRepository(db)
-	moviePosterService := service.NewMoviePosterService(moviePosterRepository)
-	handler := handler.NewMovieHandler(movieService, moviePosterService)
+	bucket, err := client.Bucket(context.Background(), bucketName)
+	if err != nil {
+		log.Fatal("Failed to get B2 bucket:", err)
+	}
 
-	r := gin.Default()
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	return bucket, bucketURL
+}
 
-	r.GET("/movies", handler.GetAllMovies)
-	r.GET("/movies/:id", handler.GetMovieByID)
-	r.POST("/movies", handler.CreateMovie)
-	r.PUT("/movies/:id", handler.UpdateMovie)
-	r.DELETE("/movies/:id", handler.DeleteMovie)
-	r.POST("/movies/:id/poster", handler.UploadPoster)
-	r.GET("/movies/:id/poster", handler.GetPoster)
+func loadInitialData(movieService *service.MovieService) {
+	err := loader.LoadMoviesFromJSON(movieService, "movies_dump.json")
+	if err != nil {
+		log.Fatal("Failed to load movies from JSON:", err)
+	}
+}
 
+func startServer(r *gin.Engine) {
 	if err := r.Run("localhost:8080"); err != nil {
-		log.Fatal("Failed to start server", err)
+		log.Fatal("Failed to start server:", err)
 	}
 }

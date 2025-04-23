@@ -14,8 +14,6 @@ definitions:
         type: integer
       language:
         type: string
-      poster_id:
-        type: integer
       rating:
         type: number
       release_date:
@@ -296,6 +294,85 @@ paths:
       summary: Upload a movie poster
       tags:
       - movies
+  /movies/{id}/trailer:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Uploads a trailer file for a specific movie and stores it in B2
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Trailer file
+        in: formData
+        name: trailer
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Upload movie trailer
+      tags:
+      - Movies
+    put:
+      consumes:
+      - application/json
+      description: Sets a new trailer URL for a specific movie
+      parameters:
+      - description: Movie ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Trailer URL
+        in: query
+        name: url
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Set movie trailer URL
+      tags:
+      - Movies
 schemes:
 - http
 swagger: "2.0"

@@ -1,9 +1,6 @@
 package service
 
 import (
-	"io/ioutil"
-	"mime/multipart"
-
 	"github.com/Cladkoewka/movie-manager/internal/constants"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/model/dto"
@@ -77,19 +74,4 @@ func (s *MovieService) DeleteMovie(id int64) error {
 		return err
 	}
 	return nil
-}
-
-func (s *MovieService) SavePoster(id int64, file *multipart.FileHeader) error {
-	fileContent, err := file.Open()
-	if err != nil {
-		return err
-	}
-	defer fileContent.Close()
-
-	posterData, err := ioutil.ReadAll(fileContent)
-	if err != nil {
-		return err
-	}
-
-	return s.repo.UpdateMoviePoster(id, posterData)
 }

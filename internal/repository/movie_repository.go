@@ -2,11 +2,12 @@ package repository
 
 import (
 	"fmt"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+
+	"github.com/Cladkoewka/movie-manager/internal/config"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/model/dto"
-	"github.com/Cladkoewka/movie-manager/internal/config"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type MovieRepository interface {
@@ -15,7 +16,7 @@ type MovieRepository interface {
 	CreateMovie(movie model.Movie) (*model.Movie, error)
 	UpdateMovie(movie model.Movie) (*model.Movie,error)
 	DeleteMovie(id int64) error
-	UpdateMoviePoster(movieID int64, poster []byte) error
+	UpdateMovieTrailer(movieID int64, trailerURL string) error
 }
 
 type MovieRepositoryImpl struct {
@@ -104,11 +105,16 @@ func (r *MovieRepositoryImpl) DeleteMovie(id int64) error {
 	return nil
 }
 
-func (r *MovieRepositoryImpl) UpdateMoviePoster(movieID int64, poster []byte) error {
+func (r *MovieRepositoryImpl) UpdateMovieTrailer(movieID int64, trailerURL string) error {
 	var movie model.Movie
 	if err := r.db.First(&movie, "id = ?", movieID).Error; err != nil {
 		return err
 	}
 
-	return r.db.Save(&movie).Error
+	movie.TrailerURL = trailerURL
+	if err := r.db.Save(&movie).Error; err != nil {
+		return err
+	}
+
+	return nil
 }
