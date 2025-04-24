@@ -47,7 +47,7 @@ func main() {
 		runMigrations(db)
 	}
 
-	bucket, bucketURL := initB2()
+	//bucket, bucketURL := initB2()
 	
 	cacheService := cache.NewRedisService()
 
@@ -59,8 +59,8 @@ func main() {
 	moviePosterRepository := repository.NewMoviePosterRepository(db)
 	moviePosterService := service.NewMoviePosterService(moviePosterRepository)
 	movieHandler := handler.NewMovieHandler(movieService, moviePosterService)
-	movieTrailerService := service.NewMovieTrailerService(movieRepository, bucket, bucketURL)
-	movieTrailerHandler := handler.NewMovieTrailerHandler(movieTrailerService)
+	//movieTrailerService := service.NewMovieTrailerService(movieRepository, bucket, bucketURL)
+	//movieTrailerHandler := handler.NewMovieTrailerHandler(movieTrailerService)
 
 	if shouldLoadInitialData {
 		loadInitialData(movieService, reviewService)
@@ -78,8 +78,8 @@ func main() {
 	r.DELETE("/movies/:id", movieHandler.DeleteMovie)
 	r.POST("/movies/:id/poster", movieHandler.UploadPoster)
 	r.GET("/movies/:id/poster", movieHandler.GetPoster)
-	r.POST("/movies/:id/trailer", movieTrailerHandler.UploadTrailer)
-	r.PUT("/movies/:id/trailer", movieTrailerHandler.SetTrailerUrl)
+	//r.POST("/movies/:id/trailer", movieTrailerHandler.UploadTrailer)
+	//r.PUT("/movies/:id/trailer", movieTrailerHandler.SetTrailerUrl)
 	r.GET("/reviews/movie/:movie_id", reviewHandler.GetReviewsByMovieID)
 	r.POST("/reviews", reviewHandler.CreateReview)
 	r.DELETE("/reviews/:id", reviewHandler.DeleteReview)
