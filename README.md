@@ -1,6 +1,16 @@
 # 🎬 Movie Manager API
 
-A simple and extensible RESTful API for managing movies, posters, and user reviews. Built with Go, Gin, GORM, and Redis. Swagger is available for easy documentation and testing.
+A simple and extensible RESTful API for managing movies, posters, and user reviews. Built with Go, Gin, GORM, and Redis. Swagger is available for easy documentation and testing. Works with the [Movie Manager Frontend](https://github.com/Cladkoewka/movie-manager-frontend).
+
+#### [🚀 Try Movie Manager In Work](https://cladkoewka.github.io/movie-manager-frontend/)
+
+
+## Main Page
+![main](https://github.com/user-attachments/assets/b7b73a34-76d4-4aae-af84-92286d5032a9)
+## Movie Details Page
+![Desc](https://github.com/user-attachments/assets/5db1da36-9295-44fa-bb37-899ff56c74bc)
+## Search & Sorting
+![search](https://github.com/user-attachments/assets/790a6090-f100-493c-bea3-1c164c93fc42)
 
 ## 🚀 Features
 
@@ -85,6 +95,8 @@ http://localhost:8080/swagger/index.html
 ```
 
 ## 📂 Available Endpoints
+
+![swag](https://github.com/user-attachments/assets/2b2a5da6-1666-41cc-a3d0-cda1698f4b87)
 
 ### 🎥 Movies
 
