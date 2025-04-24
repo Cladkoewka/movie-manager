@@ -138,8 +138,12 @@ func loadInitialData(movieService *service.MovieService, reviewService *service.
 }
 
 func startServer(r *gin.Engine) {
-
-	if err := r.Run("localhost:8080"); err != nil {
+	port := os.Getenv("PORT")
+	if port == "" {
+			port = "8080" // fallback для локального запуска
+	}
+	
+	if err := r.Run(":" + port); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}
 }
