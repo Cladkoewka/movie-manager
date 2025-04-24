@@ -12,13 +12,15 @@ import (
 	"log"
 	"os"
 
+	"github.com/gin-contrib/cors"
+
 	_ "github.com/Cladkoewka/movie-manager/docs"
+	"github.com/Cladkoewka/movie-manager/internal/cache"
 	"github.com/Cladkoewka/movie-manager/internal/handler"
 	"github.com/Cladkoewka/movie-manager/internal/loader"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/repository"
 	"github.com/Cladkoewka/movie-manager/internal/service"
-	"github.com/Cladkoewka/movie-manager/internal/cache"
 	"github.com/gin-gonic/gin"
 	"github.com/kurin/blazer/b2"
 	swaggerFiles "github.com/swaggo/files"
@@ -49,7 +51,9 @@ func main() {
 	
 	cacheService := cache.NewRedisService()
 
-	
+	reviewRepository := repository.NewReviewRepository(db)
+	reviewService := service.NewReviewService(reviewRepository)
+	reviewHandler := handler.NewReviewHandler(reviewService)
 	movieRepository := repository.NewMovieRepository(db, cacheService)
 	movieService := service.NewMovieService(movieRepository)
 	moviePosterRepository := repository.NewMoviePosterRepository(db)
@@ -59,10 +63,12 @@ func main() {
 	movieTrailerHandler := handler.NewMovieTrailerHandler(movieTrailerService)
 
 	if shouldLoadInitialData {
-		loadInitialData(movieService)
+		loadInitialData(movieService, reviewService)
 	}
 
 	r := gin.Default()
+	
+	r.Use(cors.Default())
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.GET("/movies", movieHandler.GetAllMovies)
@@ -74,6 +80,10 @@ func main() {
 	r.GET("/movies/:id/poster", movieHandler.GetPoster)
 	r.POST("/movies/:id/trailer", movieTrailerHandler.UploadTrailer)
 	r.PUT("/movies/:id/trailer", movieTrailerHandler.SetTrailerUrl)
+	r.GET("/reviews/movie/:movie_id", reviewHandler.GetReviewsByMovieID)
+	r.POST("/reviews", reviewHandler.CreateReview)
+	r.DELETE("/reviews/:id", reviewHandler.DeleteReview)
+
 
 	startServer(r)
 }
@@ -91,6 +101,9 @@ func runMigrations(db *gorm.DB) {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 	if err := db.AutoMigrate(&model.MoviePoster{}); err != nil {
+		log.Fatalf("Failed to migrate database: %v", err)
+	}
+	if err := db.AutoMigrate(&model.Review{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 }
@@ -114,14 +127,18 @@ func initB2() (*b2.Bucket, string) {
 	return bucket, bucketURL
 }
 
-func loadInitialData(movieService *service.MovieService) {
+func loadInitialData(movieService *service.MovieService, reviewService *service.ReviewService) {
 	err := loader.LoadMoviesFromJSON(movieService, "movies_dump.json")
 	if err != nil {
-		log.Fatal("Failed to load movies from JSON:", err)
+	log.Fatal("Failed to load movies from JSON:", err)
+	}
+	if err := loader.LoadReviewsFromJSON(reviewService, "reviews_dump.json"); err != nil {
+		log.Fatal("Failed to load reviews from JSON:", err)
 	}
 }
 
 func startServer(r *gin.Engine) {
+
 	if err := r.Run("localhost:8080"); err != nil {
 		log.Fatal("Failed to start server:", err)
 	}

@@ -1,9 +1,7 @@
 package repository
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -15,10 +13,10 @@ import (
 )
 
 type MovieRepository interface {
-	GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error)
+	GetAllMovies(params dto.MovieQueryParams) (dto.MoviesResponse, error)
 	GetMovieByID(id int64) (*model.Movie, error)
 	CreateMovie(movie model.Movie) (*model.Movie, error)
-	UpdateMovie(movie model.Movie) (*model.Movie,error)
+	UpdateMovie(movie model.Movie) (*model.Movie, error)
 	DeleteMovie(id int64) error
 	UpdateMovieTrailer(movieID int64, trailerURL string) error
 }
@@ -49,32 +47,41 @@ func NewDBConnection() (*gorm.DB, error) {
 	return db, nil
 }
 
-func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error) {
+func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) (dto.MoviesResponse, error) {
 	var movies []model.Movie
+	var total int64
 
-	key, err := r.redisService.GenerateCacheKey("movies", params)
-	if err == nil {
-		if err := r.redisService.GetCache(context.Background(), key, &movies); err == nil {
-			return movies, nil
-		}
-	}
+	// Caching
+	// key, err := r.redisService.GenerateCacheKey("movies", params)
+	// if err == nil {
+	// 	if err := r.redisService.GetCache(context.Background(), key, &movies); err == nil {
+	// 		return dto.MoviesResponse{
+	// 			Movies: movies,
+	// 			Total:  int64(len(movies)), 
+	// 		}, nil
+	// 	}
+	// }
 
 	query := r.db.Model(&model.Movie{})
 
 	if params.Search != "" {
-		query = query.Where("title LIKE ?", "%"+params.Search+"%")
+		query = query.Where("title ILIKE ?", "%" + params.Search + "%")
 	}
 
 	if params.Genre != "" {
-		query = query.Where("genre = ?", params.Genre)
+		query = query.Where("genre ILIKE ?", "%" + params.Genre + "%")
 	}
 
 	if params.Language != "" {
-		query = query.Where("language = ?", params.Language)
+		query = query.Where("language ILIKE ?", "%" + params.Language + "%")
 	}
 
 	if params.Rating != nil {
 		query = query.Where("rating >= ?", *params.Rating)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return dto.MoviesResponse{}, err
 	}
 
 	query = query.Order(params.SortBy + " " + params.OrderBy)
@@ -83,16 +90,20 @@ func (r *MovieRepositoryImpl) GetAllMovies(params dto.MovieQueryParams) ([]model
 	query = query.Limit(params.PageSize).Offset(offset)
 
 	if err := query.Find(&movies).Error; err != nil {
-		return nil, err
+		return dto.MoviesResponse{}, err
 	}
 
-	if cacheKey, err := r.redisService.GenerateCacheKey("movies", params); err == nil {
-    _ = r.redisService.SetCache(context.Background(), cacheKey, movies, 10*time.Minute)
-	}	
+	// if cacheKey, err := r.redisService.GenerateCacheKey("movies", params); err == nil {
+  //   _ = r.redisService.SetCache(context.Background(), cacheKey, movies, 10*time.Minute)
+	// }	
 
-
-	return movies, nil
+	return dto.MoviesResponse{
+		Movies: movies,
+		Total:  total,
+	}, nil
 }
+
+
 
 func (r *MovieRepositoryImpl) GetMovieByID(id int64) (*model.Movie, error) {
 	var movie model.Movie

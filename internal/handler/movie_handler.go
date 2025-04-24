@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"strconv"
+
 	"github.com/Cladkoewka/movie-manager/internal/constants"
 	"github.com/Cladkoewka/movie-manager/internal/model"
 	"github.com/Cladkoewka/movie-manager/internal/model/dto"
@@ -21,20 +22,20 @@ func NewMovieHandler(movieService *service.MovieService, moviePosterService *ser
 
 // GetAllMovies godoc
 // @Summary Get all movies
-// @Description Get list of all movies
+// @Description Get paginated list of movies with optional filters
 // @Tags movies
 // @Accept json
 // @Produce json
 // @Param search query string false "Search term for movie title"
 // @Param genre query string false "Genre of the movie"
 // @Param language query string false "Language of the movie"
-// @Param rating query float64 false "Rating of the movie (0-10)"
+// @Param rating query number false "Minimum rating of the movie (0-10)"
 // @Param sort_by query string false "Field to sort by (e.g. 'title', 'rating')"
-// @Param order query string false "Order of sorting ('asc' or 'desc')"
+// @Param order query string false "Sort order: 'asc' or 'desc'"
 // @Param page query int false "Page number for pagination"
 // @Param pageSize query int false "Number of items per page"
-// @Success 200 {array} model.Movie
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} dto.MoviesResponse
+// @Failure 500 {object} map[string]string
 // @Router /movies [get]
 func (h *MovieHandler) GetAllMovies(c *gin.Context) {
 	var params dto.MovieQueryParams
@@ -64,12 +65,12 @@ func (h *MovieHandler) GetAllMovies(c *gin.Context) {
 		params.PageSize = constants.DefaultPageSize
 	}
 
-	movies, err := h.movieService.GetAllMovies(params)
+	moviesResponse, err := h.movieService.GetAllMovies(params)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch movies"})
 		return 
 	}
-	c.JSON(http.StatusOK, movies)
+	c.JSON(http.StatusOK, moviesResponse)
 }
 
 // GetMovieByID godoc

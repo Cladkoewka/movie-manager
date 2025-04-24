@@ -35,3 +35,29 @@ func LoadMoviesFromJSON(movieService *service.MovieService, filePath string) err
 
 	return nil
 }
+
+func LoadReviewsFromJSON(reviewService *service.ReviewService, filePath string) error {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("не удалось открыть файл: %w", err)
+	}
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("не удалось прочитать файл: %w", err)
+	}
+
+	var reviews []model.Review
+	if err := json.Unmarshal(data, &reviews); err != nil {
+		return fmt.Errorf("не удалось распарсить JSON: %w", err)
+	}
+
+	for _, review := range reviews {
+		if _, err := reviewService.CreateReview(review); err != nil {
+			return fmt.Errorf("ошибка при создании отзыва: %w", err)
+		}
+	}
+
+	return nil
+}

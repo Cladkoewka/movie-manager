@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  dto.MoviesResponse:
+    properties:
+      movies:
+        items:
+          $ref: '#/definitions/model.Movie'
+        type: array
+      total:
+        type: integer
+    type: object
   model.Movie:
     properties:
       description:
@@ -38,6 +47,15 @@ definitions:
           type: integer
         type: array
     type: object
+  model.Review:
+    properties:
+      comment:
+        type: string
+      id:
+        type: integer
+      movie_id:
+        type: integer
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -49,7 +67,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get list of all movies
+      description: Get paginated list of movies with optional filters
       parameters:
       - description: Search term for movie title
         in: query
@@ -63,7 +81,7 @@ paths:
         in: query
         name: language
         type: string
-      - description: Rating of the movie (0-10)
+      - description: Minimum rating of the movie (0-10)
         in: query
         name: rating
         type: number
@@ -71,7 +89,7 @@ paths:
         in: query
         name: sort_by
         type: string
-      - description: Order of sorting ('asc' or 'desc')
+      - description: 'Sort order: ''asc'' or ''desc'''
         in: query
         name: order
         type: string
@@ -89,13 +107,12 @@ paths:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.Movie'
-            type: array
+            $ref: '#/definitions/dto.MoviesResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties: true
+            additionalProperties:
+              type: string
             type: object
       summary: Get all movies
       tags:
@@ -373,6 +390,100 @@ paths:
       summary: Set movie trailer URL
       tags:
       - Movies
+  /reviews:
+    post:
+      consumes:
+      - application/json
+      description: Create a new review for a movie
+      parameters:
+      - description: Review payload
+        in: body
+        name: review
+        required: true
+        schema:
+          $ref: '#/definitions/model.Review'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Review'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a review
+      tags:
+      - reviews
+  /reviews/{id}:
+    delete:
+      description: Delete a review by ID
+      parameters:
+      - description: Review ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a review
+      tags:
+      - reviews
+  /reviews/movie/{movie_id}:
+    get:
+      description: Get all reviews by Movie ID
+      parameters:
+      - description: Movie ID
+        in: path
+        name: movie_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Review'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all reviews for a movie
+      tags:
+      - reviews
 schemes:
 - http
 swagger: "2.0"

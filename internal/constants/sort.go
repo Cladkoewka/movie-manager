@@ -7,8 +7,8 @@ var AllowedSortFields = map[string]bool{
 }
 
 const (
-	DefaultSortBy  = "title"
-	DefaultOrderBy = "asc"
-	DefaultPage    = 1
-	DefaultPageSize = 10
+	DefaultSortBy   = "title"
+	DefaultOrderBy  = "asc"
+	DefaultPage     = 1
+	DefaultPageSize = 12
 )

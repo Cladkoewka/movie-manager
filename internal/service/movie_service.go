@@ -15,7 +15,7 @@ func NewMovieService(repo repository.MovieRepository) *MovieService {
 	return &MovieService{repo: repo}
 }
 
-func (s *MovieService) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie, error) {
+func (s *MovieService) GetAllMovies(params dto.MovieQueryParams) (dto.MoviesResponse, error) {
 	if !constants.AllowedSortFields[params.SortBy] {
 		params.SortBy = constants.DefaultSortBy
 	}
@@ -37,11 +37,11 @@ func (s *MovieService) GetAllMovies(params dto.MovieQueryParams) ([]model.Movie,
 		}
 	}
 
-	movies, err := s.repo.GetAllMovies(params)
+	moviesResponse, err := s.repo.GetAllMovies(params)
 	if err != nil {
-		return nil, err
+		return dto.MoviesResponse{}, err
 	}
-	return movies, nil
+	return moviesResponse, nil
 }
 
 func (s *MovieService) GetMovieByID(id int64) (*model.Movie, error) {
