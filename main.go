@@ -43,9 +43,9 @@ func init() {
 func main() {
 	db := initDB()
 
-	if shouldMigrate {
+	//if shouldMigrate {
 		runMigrations(db)
-	}
+	//}
 
 	//bucket, bucketURL := initB2()
 	
@@ -62,9 +62,9 @@ func main() {
 	//movieTrailerService := service.NewMovieTrailerService(movieRepository, bucket, bucketURL)
 	//movieTrailerHandler := handler.NewMovieTrailerHandler(movieTrailerService)
 
-	if shouldLoadInitialData {
+	//if shouldLoadInitialData {
 		loadInitialData(movieService, reviewService)
-	}
+	//}
 
 	r := gin.Default()
 	
